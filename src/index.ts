@@ -13,8 +13,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// Global error handlers
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error)
+  console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace')
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise)
+  console.error('Reason:', reason)
+  if (reason instanceof Error) {
+    console.error('Stack:', reason.stack)
+  }
+  process.exit(1)
+})
+
 async function main() {
   console.log('🚀 SALON BOARD Sync Bot started')
+  console.log(`🕐 Timestamp: ${new Date().toISOString()}`)
+  console.log(`📦 Environment: NODE_ENV=${process.env.NODE_ENV}`)
 
   try {
     // Random jitter: 0-30 seconds
@@ -24,6 +42,10 @@ async function main() {
 
     // Get all salon credentials
     console.log('📋 Fetching salon credentials...')
+    console.log(`🔑 SUPABASE_URL: ${process.env.SUPABASE_URL ? '✓ Set' : '❌ Missing'}`)
+    console.log(`🔑 SUPABASE_SERVICE_KEY: ${process.env.SUPABASE_SERVICE_KEY ? '✓ Set' : '❌ Missing'}`)
+    console.log(`🔑 ENCRYPTION_KEY: ${process.env.ENCRYPTION_KEY ? '✓ Set' : '❌ Missing'}`)
+
     const salons = await getAllSalonCredentials()
     console.log(`✓ Found ${salons.length} salon(s)`)
 
@@ -63,7 +85,9 @@ async function main() {
 
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err)
+        const errorStack = err instanceof Error ? err.stack : 'No stack trace'
         console.error(`❌ Sync failed for salon ${salonId}: ${errorMsg}`)
+        console.error(`📍 Stack: ${errorStack}`)
 
         try {
           // Increment failure count
@@ -89,15 +113,22 @@ async function main() {
     }
 
     console.log('\n✨ Sync bot completed successfully')
+    process.exit(0)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace'
     console.error('💥 Fatal error:', errorMsg)
+    console.error('📍 Stack:', errorStack)
+    console.error('⏰ Failed at:', new Date().toISOString())
     process.exit(1)
   }
 }
 
 // Run the bot
 main().catch(error => {
-  console.error('Uncaught error:', error)
+  const errorMsg = error instanceof Error ? error.message : String(error)
+  const errorStack = error instanceof Error ? error.stack : 'No stack trace'
+  console.error('❌ Main function error:', errorMsg)
+  console.error('📍 Stack:', errorStack)
   process.exit(1)
 })
