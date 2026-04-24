@@ -20,10 +20,10 @@ export interface SalonCredentials {
 
 export interface Reservation {
   hpb_reservation_id: string
-  guest_name: string
+  customer_name: string
   menu_name: string
-  start_at: string
-  end_at: string
+  start_time: string
+  end_time: string
   status: string
   raw_data: Record<string, unknown>
 }
@@ -49,10 +49,10 @@ export async function upsertReservations(salonId: string, reservations: Reservat
   const records = reservations.map(r => ({
     salon_id: salonId,
     hpb_reservation_id: r.hpb_reservation_id,
-    guest_name: r.guest_name,
+    customer_name: r.customer_name,
     menu_name: r.menu_name,
-    start_at: r.start_at,
-    end_at: r.end_at,
+    start_time: r.start_time,
+    end_time: r.end_time,
     status: r.status,
     raw_data: r.raw_data,
     synced_at: new Date().toISOString(),

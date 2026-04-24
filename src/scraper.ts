@@ -129,10 +129,10 @@ async function extractReservations(page: Page, hpbSalonId: string): Promise<Rese
         if (resIdEl && nameEl && startEl) {
           const reservation: Reservation = {
             hpb_reservation_id: (await resIdEl.textContent())?.trim() || '',
-            guest_name: (await nameEl.textContent())?.trim() || '',
+            customer_name: (await nameEl.textContent())?.trim() || '',
             menu_name: (await menuEl?.textContent())?.trim() || '',
-            start_at: (await startEl.textContent())?.trim() || '',
-            end_at: (await endEl?.textContent())?.trim() || '',
+            start_time: (await startEl.textContent())?.trim() || '',
+            end_time: (await endEl?.textContent())?.trim() || '',
             status: 'confirmed',
             raw_data: { source: 'salon_board', extracted_at: new Date().toISOString() },
           }
