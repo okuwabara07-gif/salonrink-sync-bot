@@ -19,8 +19,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 export interface SalonCredentials {
   salon_id: string
   hpb_salon_id: string
-  hpb_login_id_enc: string
-  hpb_password_enc: string
+  hpb_username_encrypted: string
+  hpb_password_encrypted: string
 }
 
 export interface Reservation {
@@ -36,7 +36,7 @@ export interface Reservation {
 export async function getAllSalonCredentials(): Promise<SalonCredentials[]> {
   const { data, error } = await supabase
     .from('salon_hpb_credentials')
-    .select('salon_id, hpb_salon_id, hpb_login_id_enc, hpb_password_enc')
+    .select('salon_id, hpb_salon_id, hpb_username_encrypted, hpb_password_encrypted')
 
   if (error) {
     throw new Error(`Failed to fetch salon credentials: ${error.message}`)
