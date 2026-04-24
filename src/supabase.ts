@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim()
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY?.trim()
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required')
 }
+
+// Diagnostic logging for SERVICE_KEY
+console.log('[Supabase Init] KEY length:', SUPABASE_SERVICE_KEY.length)
+console.log('[Supabase Init] KEY starts with:', SUPABASE_SERVICE_KEY.substring(0, 10))
+console.log('[Supabase Init] KEY first 5 char codes:', SUPABASE_SERVICE_KEY.substring(0, 5).split('').map(c => c.charCodeAt(0)))
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
