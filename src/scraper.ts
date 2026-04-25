@@ -1,5 +1,10 @@
-import { chromium, Browser, Page } from 'playwright'
+import { chromium } from 'playwright-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import type { Browser, Page } from 'playwright'
 import { Reservation } from './supabase'
+
+// Enable stealth plugin
+chromium.use(StealthPlugin())
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -43,8 +48,11 @@ export async function scrapeReservations(
     })
 
     console.log(`[${hpbSalonId}] Creating page with headers...`)
-    const page = await browser.newPage({
+    const context = await browser.newContext({
       userAgent: getRandomUserAgent(),
+      viewport: { width: 1920, height: 1080 },
+      locale: 'ja-JP',
+      timezoneId: 'Asia/Tokyo',
       extraHTTPHeaders: {
         'Accept-Language': 'ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -58,13 +66,7 @@ export async function scrapeReservations(
         'Cache-Control': 'max-age=0',
       },
     })
-
-    // Override navigator.webdriver to hide automation
-    await page.addInitScript(`
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined,
-      })
-    `)
+    const page = await context.newPage()
 
     // Navigate to SALON BOARD login with extended timeout
     console.log(`[${hpbSalonId}] Navigating to login page (timeout: 120s)...`)
@@ -104,12 +106,18 @@ export async function scrapeReservations(
       throw new Error('Login form fields not found')
     }
 
-    // Fill login credentials
+    // Fill login credentials with human-like typing
     console.log(`[${hpbSalonId}] Filling login credentials...`)
-    await loginIdInput.fill(loginId)
-    await sleep(1000) // Avoid detection
-    await passwordInput.fill(password)
-    await sleep(1000)
+    await loginIdInput.click()
+    for (const char of loginId) {
+      await page.keyboard.type(char, { delay: 80 + Math.random() * 120 })
+    }
+    await sleep(500 + Math.random() * 1000)
+    await passwordInput.click()
+    for (const char of password) {
+      await page.keyboard.type(char, { delay: 80 + Math.random() * 120 })
+    }
+    await sleep(800 + Math.random() * 1200)
 
     // Submit login form
     const submitBtn = await page.$('button[type="submit"]') || await page.$('input[type="submit"]')
@@ -118,6 +126,12 @@ export async function scrapeReservations(
     }
 
     console.log(`[${hpbSalonId}] Submitting login...`)
+    await page.mouse.move(
+      400 + Math.random() * 600,
+      300 + Math.random() * 300,
+      { steps: 15 }
+    )
+    await sleep(800 + Math.random() * 1500)
     await submitBtn.click()
 
     // Wait for post-login navigation
