@@ -1,3 +1,4 @@
+import https from 'https'
 import { decrypt } from './crypto'
 import {
   getAllSalonCredentials,
@@ -11,6 +12,33 @@ import { notifyOsamu } from './notify'
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function runConnectivityDiagnostics(): Promise<void> {
+  console.log('\n' + '='.repeat(60))
+  console.log('🔍 Connectivity Diagnostics')
+  console.log('='.repeat(60))
+
+  return new Promise((resolve) => {
+    https.get('https://salonboard.com/login/', { timeout: 10000 }, (res) => {
+      console.log(`✓ SALON BOARD Status: ${res.statusCode}`)
+      console.log(`  Server: ${res.headers.server || 'unknown'}`)
+      console.log(`  Content-Type: ${res.headers['content-type'] || 'unknown'}`)
+
+      let data = ''
+      res.on('data', (chunk) => {
+        data += chunk
+        if (data.length > 500) res.destroy()
+      })
+      res.on('end', () => {
+        console.log(`  Body length: ${data.length} bytes`)
+        resolve()
+      })
+    }).on('error', (err) => {
+      console.error(`✗ Connection Error: ${err instanceof Error ? err.message : String(err)}`)
+      resolve()
+    })
+  })
 }
 
 // Global error handlers
@@ -33,6 +61,9 @@ async function main() {
   console.log('🚀 SALON BOARD Sync Bot started')
   console.log(`🕐 Timestamp: ${new Date().toISOString()}`)
   console.log(`📦 Environment: NODE_ENV=${process.env.NODE_ENV}`)
+
+  // TODO: Remove diagnostic after debugging
+  await runConnectivityDiagnostics()
 
   try {
     // Random jitter: 0-30 seconds
