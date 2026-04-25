@@ -1,4 +1,5 @@
 import https from 'https'
+import { execSync } from 'child_process'
 import { decrypt } from './crypto'
 import {
   getAllSalonCredentials,
@@ -41,6 +42,50 @@ async function runConnectivityDiagnostics(): Promise<void> {
   })
 }
 
+function runRuntimeDiagnostics(): void {
+  if (process.env.RUN_DIAG !== 'true') {
+    return
+  }
+
+  console.log('\n' + '='.repeat(60))
+  console.log('🔍 Runtime Diagnostic (curl)')
+  console.log('='.repeat(60))
+
+  // Test 1: SALON BOARD
+  try {
+    console.log('\n=== Test 1: SALON BOARD ===')
+    const sb = execSync('curl -v -m 10 https://salonboard.com/ 2>&1 | head -80', { encoding: 'utf8' })
+    console.log(sb)
+  } catch (e: any) {
+    console.error('SALON BOARD failed:', e.message)
+    if (e.stdout) console.log(e.stdout)
+    if (e.stderr) console.error(e.stderr)
+  }
+
+  // Test 2: Google
+  try {
+    console.log('\n=== Test 2: Google ===')
+    const g = execSync('curl -v -m 10 https://www.google.com/ 2>&1 | head -30', { encoding: 'utf8' })
+    console.log(g)
+  } catch (e: any) {
+    console.error('Google failed:', e.message)
+    if (e.stdout) console.log(e.stdout)
+  }
+
+  // Test 3: DNS
+  try {
+    console.log('\n=== Test 3: DNS ===')
+    const dns = execSync('getent hosts salonboard.com 2>&1', { encoding: 'utf8' })
+    console.log('salonboard.com:', dns)
+    const dnsGoogle = execSync('getent hosts www.google.com 2>&1', { encoding: 'utf8' })
+    console.log('www.google.com:', dnsGoogle)
+  } catch (e: any) {
+    console.error('DNS failed:', e.message)
+  }
+
+  console.log('\n✅ Runtime diagnostic complete')
+}
+
 // Global error handlers
 process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error)
@@ -62,8 +107,9 @@ async function main() {
   console.log(`🕐 Timestamp: ${new Date().toISOString()}`)
   console.log(`📦 Environment: NODE_ENV=${process.env.NODE_ENV}`)
 
-  // TODO: Remove diagnostic after debugging
+  // TODO: Remove diagnostics after debugging
   await runConnectivityDiagnostics()
+  runRuntimeDiagnostics()
 
   try {
     // Random jitter: 0-30 seconds
