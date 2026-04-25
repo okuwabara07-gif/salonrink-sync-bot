@@ -19,13 +19,21 @@ RUN npm run build
 ENV NODE_ENV=production
 
 # TODO: Remove this diagnostic after debugging
-RUN echo "🔍 Running curl diagnostic..." && \
+RUN set -x && \
+    echo "🔍 Running curl diagnostic..." && \
     echo "=== Test 1: SALON BOARD ===" && \
-    curl -v -m 10 https://salonboard.com/ 2>&1 | head -50 && \
+    curl -v -m 10 https://salonboard.com/ > /tmp/sb.log 2>&1; \
+    echo "Exit code: $?" && \
+    cat /tmp/sb.log | head -80 && \
     echo "" && \
     echo "=== Test 2: Google ===" && \
-    curl -v -m 10 https://www.google.com/ 2>&1 | head -20 && \
+    curl -v -m 10 https://www.google.com/ > /tmp/g.log 2>&1; \
+    echo "Exit code: $?" && \
+    cat /tmp/g.log | head -30 && \
     echo "" && \
+    echo "=== Test 3: DNS ===" && \
+    (getent hosts salonboard.com || echo "DNS failed") && \
+    (getent hosts www.google.com || echo "DNS failed") && \
     echo "✅ Curl diagnostic complete"
 
 # Run
