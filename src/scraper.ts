@@ -26,25 +26,72 @@ export async function scrapeReservations(
 
   let browser: Browser | null = null
   try {
-    // Launch browser with Playwright settings for Railway
+    // Launch browser with stealth mode for anti-detection
+    console.log(`[${hpbSalonId}] Launching browser...`)
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-popup-blocking',
+        '--disable-extensions',
+      ],
     })
 
+    console.log(`[${hpbSalonId}] Creating page with headers...`)
     const page = await browser.newPage({
       userAgent: getRandomUserAgent(),
+      extraHTTPHeaders: {
+        'Accept-Language': 'ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0',
+      },
     })
 
-    // Navigate to SALON BOARD login
-    console.log(`[${hpbSalonId}] Navigating to login page...`)
-    await page.goto('https://salonboard.com/login/', {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
-    })
+    // Override navigator.webdriver to hide automation
+    await page.addInitScript(`
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      })
+    `)
 
-    // Wait for login form
-    await page.waitForSelector('input[id*="uid"], input[name*="id"], input[placeholder*="ID"]', { timeout: 10000 })
+    // Navigate to SALON BOARD login with extended timeout
+    console.log(`[${hpbSalonId}] Navigating to login page (timeout: 120s)...`)
+    try {
+      await page.goto('https://salonboard.com/login/', {
+        waitUntil: 'domcontentloaded',
+        timeout: 120000
+      })
+      console.log(`[${hpbSalonId}] ✓ Login page loaded`)
+    } catch (navError) {
+      const errorMsg = navError instanceof Error ? navError.message : String(navError)
+      console.error(`[${hpbSalonId}] ✗ Navigation error: ${errorMsg}`)
+      console.log(`[${hpbSalonId}] Attempting load state: ${page.url()}`)
+      throw navError
+    }
+
+    // Wait for login form with better error handling
+    console.log(`[${hpbSalonId}] Waiting for login form...`)
+    try {
+      await page.waitForSelector('input[id*="uid"], input[name*="id"], input[placeholder*="ID"]', { timeout: 15000 })
+      console.log(`[${hpbSalonId}] ✓ Login form found`)
+    } catch (formError) {
+      console.error(`[${hpbSalonId}] ✗ Login form not found after 15s`)
+      const pageContent = await page.content()
+      console.log(`[${hpbSalonId}] Page length: ${pageContent.length}`)
+      throw new Error('Login form fields not found on page')
+    }
 
     // Try multiple selectors for login form
     const loginIdInput = await page.$('input[id*="uid"]') ||
