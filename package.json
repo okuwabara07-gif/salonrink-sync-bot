@@ -7,7 +7,8 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "test:connectivity": "ts-node src/test-connectivity.ts"
+    "test:connectivity": "ts-node src/test-connectivity.ts",
+    "test:curl": "ts-node src/test-curl.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",
