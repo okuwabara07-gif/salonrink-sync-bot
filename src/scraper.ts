@@ -38,7 +38,10 @@ export async function scrapeReservations(
 
     // Navigate to SALON BOARD login
     console.log(`[${hpbSalonId}] Navigating to login page...`)
-    await page.goto('https://salonboard.com/CNB/login/', { waitUntil: 'networkidle' })
+    await page.goto('https://salonboard.com/login/', {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
+    })
 
     // Wait for login form
     await page.waitForSelector('input[id*="uid"], input[name*="id"], input[placeholder*="ID"]', { timeout: 10000 })
@@ -71,7 +74,7 @@ export async function scrapeReservations(
     await submitBtn.click()
 
     // Wait for post-login navigation
-    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 })
+    await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
     // Check for login error
     const errorMsg = await page.$('.error, .alert-danger, [role="alert"]')
@@ -83,8 +86,9 @@ export async function scrapeReservations(
     // Navigate to reservation list
     // TODO: Adjust URL/path based on actual SALON BOARD interface
     console.log(`[${hpbSalonId}] Navigating to reservation list...`)
-    await page.goto(`https://salonboard.com/CNB/yoyaku/list.php?shop_id=${hpbSalonId}`, {
-      waitUntil: 'networkidle',
+    await page.goto(`https://salonboard.com/yoyaku/list.php?shop_id=${hpbSalonId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
     })
 
     // Extract reservations
