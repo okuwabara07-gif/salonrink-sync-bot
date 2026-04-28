@@ -1,11 +1,10 @@
-import express, { Request, Response, NextlewareFunction } from 'express'
+import express, { Request, Response, NextFunction } from 'express'
 import { decrypt } from './crypto'
 import {
-  getSalonCredentialsBySalonId,
+  getAllSalonCredentials,
   upsertReservations,
   updateSyncStatus,
-  incrementFailureCount,
-  resetFailureCount,
+  getSyncStatus,
 } from './supabase'
 import { scrapeReservations } from './scraper'
 
@@ -16,15 +15,17 @@ const SYNC_API_KEY = process.env.SYNC_API_KEY || 'default-sync-key'
 app.use(express.json())
 
 // Middleware: API Key validation
-const validateApiKey: ExpressMiddleware = (req, res, next) => {
+const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' })
+    res.status(401).json({ error: 'Missing or invalid Authorization header' })
+    return
   }
 
   const token = authHeader.slice(7) // Remove "Bearer " prefix
   if (token !== SYNC_API_KEY) {
-    return res.status(401).json({ error: 'Invalid API key' })
+    res.status(401).json({ error: 'Invalid API key' })
+    return
   }
 
   next()
@@ -48,7 +49,8 @@ app.post('/sync', validateApiKey, async (req: Request, res: Response) => {
     console.log(`📨 Sync request received for salon_id: ${salon_id}`)
 
     // Get salon credentials from Supabase
-    const salon = await getSalonCredentialsBySalonId(salon_id)
+    const allCredentials = await getAllSalonCredentials()
+    const salon = allCredentials.find(s => s.salon_id === salon_id)
     if (!salon) {
       return res.status(404).json({ error: 'Salon not found or credentials not configured' })
     }
@@ -75,7 +77,6 @@ app.post('/sync', validateApiKey, async (req: Request, res: Response) => {
       // Update sync status to healthy
       console.log('✅ Updating sync status to healthy...')
       await updateSyncStatus(salon_id, 'healthy')
-      await resetFailureCount(salon_id)
       console.log('✓ Sync status updated')
 
       res.json({
@@ -92,12 +93,13 @@ app.post('/sync', validateApiKey, async (req: Request, res: Response) => {
       console.error(`📍 Stack: ${errorStack}`)
 
       try {
-        // Increment failure count
-        const status = await incrementFailureCount(salon_id)
-        console.log(`⚠️ Failure count: ${status.consecutive_failures}`)
+        // Get current sync status
+        const currentStatus = await getSyncStatus(salon_id)
+        const failureCount = (currentStatus?.consecutive_failures || 0) + 1
+        console.log(`⚠️ Failure count: ${failureCount}`)
 
-        if (status.consecutive_failures >= 3) {
-          // Set to unhealthy and notify
+        if (failureCount >= 3) {
+          // Set to unhealthy
           console.log('🚨 Marking salon as unhealthy...')
           await updateSyncStatus(salon_id, 'unhealthy', errorMsg)
         } else {
@@ -135,7 +137,7 @@ app.use((req: Request, res: Response) => {
 })
 
 // Error handler
-app.use((err: any, req: Request, res: Response, next: any) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('💥 Express error:', err)
   res.status(500).json({
     error: 'Internal server error',
@@ -166,6 +168,3 @@ process.on('unhandledRejection', (reason, promise) => {
   }
   process.exit(1)
 })
-
-// Type definition for Express middleware
-type ExpressMiddleware = (req: Request, res: Response, next: () => void) => void | Promise<void>
