@@ -141,8 +141,8 @@ async function main() {
       try {
         // Decrypt credentials
         console.log('🔓 Decrypting credentials...')
-        const loginId = decrypt(salon.hpb_username_encrypted)
-        const password = decrypt(salon.hpb_password_encrypted)
+        const loginId = decrypt(salon.hpb_login_id_enc)
+        const password = decrypt(salon.hpb_password_enc)
 
         // Scrape reservations
         console.log('🕷️  Scraping SALON BOARD...')
